@@ -1,24 +1,26 @@
 {
-  "name": "moduleserve",
-  "version": "0.9.1",
-  "description": "Serve and transpile CommonJS modules over HTTP",
+  "name": "esmoduleserve",
+  "version": "0.1.0",
+  "description": "Serve ES modules over HTTP, rewriting imports",
   "main": "index.js",
   "bin": {
-    "moduleserve": "./bin/moduleserve.js"
+    "esmoduleserve": "./bin/esmoduleserve.js"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/marijnh/moduleserve.git"
+    "url": "git+https://github.com/marijnh/esmoduleserve.git"
   },
   "keywords": [
-    "commonjs",
     "module",
+    "es module",
     "http",
-    "development"
+    "development",
+    "dev server"
   ],
   "author": "Marijn Haverbeke <marijnh@gmail.com>",
   "license": "MIT",
   "dependencies": {
+    "resolve": "^1.15.1",
     "send": "^0.17.1",
     "serve-static": "^1.14.1"
   }

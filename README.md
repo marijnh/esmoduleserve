@@ -1,4 +1,6 @@
-# Moduleserve
+# esmoduleserve
+
+FIXME rewrite docs
 
 This is a shim HTTP server for directly running your CommonJS (or ES6)
 modules for development and testing (without a bundling step, and with
