@@ -13,7 +13,9 @@ class Cached {
 class ModuleServer {
   constructor(options) {
     this.root = unwin(options.root)
-    this.maxParent = options.maxParent == null ? 1 : options.maxParent
+    this.maxDepth = options.maxDepth == null ? 1 : options.maxDepth
+    this.prefix = options.prefix || "_m"
+    this.prefixTest = new RegExp(`^/${this.prefix}/(.*)`)
     if (this.root.charAt(this.root.length - 1) != "/") this.root += "/"
     // Maps from paths (relative to root dir) to cache entries
     this.cache = Object.create(null)
@@ -22,7 +24,7 @@ class ModuleServer {
 
   handleRequest(req, resp) {
     let url = parseURL(req.url)
-    let handle = /^\/_m\/(.*)/.exec(url.pathname)
+    let handle = this.prefixTest.exec(url.pathname)
     if (!handle) return false
 
     let send = (status, text, headers) => {
@@ -39,7 +41,7 @@ class ModuleServer {
     let path = undash(handle[1])
     let cached = this.cache[path]
     if (!cached) {
-      if (countParentRefs(path) > this.maxParent) { send(403, "Access denied"); return true }
+      if (countParentRefs(path) > this.maxDepth) { send(403, "Access denied"); return true }
       let fullPath = unwin(pth.resolve(this.root, path)), code
       try { code = fs.readFileSync(fullPath, "utf8") }
       catch { send(404, "Not found"); return true }
@@ -75,7 +77,7 @@ class ModuleServer {
       catch(e) { return {error: e.toString()} }
     }
 
-    return {path: "/_m/" + unwin(pth.relative(this.root, resolved))}
+    return {path: "/" + this.prefix + "/" + unwin(pth.relative(this.root, resolved))}
   }
 
   resolveImports(basePath, code) {

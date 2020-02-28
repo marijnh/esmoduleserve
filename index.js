@@ -1,10 +1,10 @@
 const ModuleServer = require("./moduleserver")
 const path = require("path")
 
-let host = "localhost", port = 8080, dir = ".", transform = null
+let host = "localhost", port = 8080, dir = ".", prefix = null, maxDepth = 1
 
 function usage() {
-  console.log("Usage: esmoduleserve [--port port] [--host host] [dir]")
+  console.log("Usage: esmoduleserve [--port port] [--host host] [--depth n] [--prefix prefix] [dir]")
   process.exit(1)
 }
 
@@ -12,6 +12,8 @@ for (var i = 2; i < process.argv.length; i++) {
   let arg = process.argv[i], next = process.argv[i + 1]
   if (arg == "--port" && next) { port = +next; i++ }
   else if (arg == "--host" && next) { host = next; i++ }
+  else if (arg == "--prefix" && next) { prefix = next; i++ }
+  else if (arg == "--depth" && /^\d+$/.test(next)) { maxDepth = +next; i++ }
   else if (dir == "." && arg[0] != "-") dir = arg
   else usage()
 }
@@ -20,7 +22,7 @@ for (var i = 2; i < process.argv.length; i++) {
 const root = path.resolve(dir)
 
 const static = require("serve-static")(root)
-const moduleServer = new ModuleServer({root}).handleRequest
+const moduleServer = new ModuleServer({root, maxDepth, prefix}).handleRequest
 
 // Create the server that listens to HTTP requests
 // and returns module contents.
