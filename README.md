@@ -5,9 +5,9 @@ non-precise import targets in your browser (without a bundling step).
 
 It acts as a regular file server for a given directory, but exposes an
 extra top-level path, `/_m/`, to serve rewritten modules relative to
-that directory. Any files requested through this path will have its
-imports (and re-exports) rewritten to point at the precise resolved
-scripts, also referenced through `/_m/`.
+that directory. Any file requested through this path will have its
+imports (and re-exports) rewritten to point at precise resolved
+scripts paths, referenced through `/_m/`.
 
 Resolution is done via the [node
 algorithm](https://www.npmjs.com/package/resolve), but letting
@@ -61,7 +61,7 @@ middleware. Usage looks something like:
     if (moduleServer.handleRequest(req, resp)) return
 
 The `handleRequest` method handles only requests whose path starts
-with `/_m/`. It returns true for such requests.
+with the prefix. It returns true for such requests.
 
 ## Source
 
