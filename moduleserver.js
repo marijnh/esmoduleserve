@@ -13,6 +13,7 @@ class Cached {
 class ModuleServer {
   constructor(options) {
     this.root = unwin(options.root)
+    this.maxParent = options.maxParent == null ? 1 : options.maxParent
     if (this.root.charAt(this.root.length - 1) != "/") this.root += "/"
     // Maps from paths (relative to root dir) to cache entries
     this.cache = Object.create(null)
@@ -38,6 +39,7 @@ class ModuleServer {
     let path = undash(handle[1])
     let cached = this.cache[path]
     if (!cached) {
+      if (countParentRefs(path) > this.maxParent) { send(403, "Access denied"); return true }
       let fullPath = unwin(pth.resolve(this.root, path)), code
       try { code = fs.readFileSync(fullPath, "utf8") }
       catch { send(404, "Not found"); return true }
@@ -73,9 +75,7 @@ class ModuleServer {
       catch(e) { return {error: e.toString()} }
     }
 
-    let relative = "/_m/" + unwin(pth.relative(this.root, resolved))
-    // FIXME deny paths that go up too much
-    return {path: relative}
+    return {path: "/_m/" + unwin(pth.relative(this.root, resolved))}
   }
 
   resolveImports(basePath, code) {
@@ -119,4 +119,10 @@ function hash(str) {
   let sum = crypto.createHash("sha1")
   sum.update(str)
   return sum.digest("hex")
+}
+
+function countParentRefs(path) {
+  let re = /(^|\/)\.\.(?=\/|$)/g, count = 0
+  while (re.exec(path)) count++
+  return count
 }
