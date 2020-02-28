@@ -1,6 +1,7 @@
 const pth = require("path"), fs = require("fs")
 const resolve = require("resolve")
 const {parse: parseURL} = require("url")
+const crypto = require("crypto")
 
 class Cached {
   constructor(content, headers) {
@@ -15,7 +16,6 @@ class ModuleServer {
     if (this.root.charAt(this.root.length - 1) != "/") this.root += "/"
     // Maps from paths (relative to root dir) to cache entries
     this.cache = Object.create(null)
-    this.nextTag = 0
     this.handleRequest = this.handleRequest.bind(this)
   }
 
@@ -45,12 +45,16 @@ class ModuleServer {
       if (error) { send(500, error); return true }
       cached = this.cache[path] = new Cached(resolvedCode, {
         "content-type": "application/javascript; charset=utf-8",
-        "etag": '"' + (++this.nextTag) + '"'
+        "etag": '"' + hash(resolvedCode) + '"'
       })
-    } else {
-      let noneMatch = req.headers["if-none-match"]
-      if (noneMatch && noneMatch.indexOf(cached.headers.etag) > -1) { send(304, null); return true }
+      // Drop cache entry when the file changes.
+      let watching = fs.watch(fullPath, () => {
+        watching.close()
+        this.cache[path] = null
+      })
     }
+    let noneMatch = req.headers["if-none-match"]
+    if (noneMatch && noneMatch.indexOf(cached.headers.etag) > -1) { send(304, null); return true }
     send(200, cached.content, cached.headers)
     return true
   }
@@ -69,9 +73,8 @@ class ModuleServer {
       catch(e) { return {error: e.toString()} }
     }
 
-    // FIXME deny relative paths that go up too much
-    let relative = unwin(pth.relative(basePath, resolved))
-    if (!/^\.\.?\//.test(relative)) relative = "./" + relative
+    let relative = "/_m/" + unwin(pth.relative(this.root, resolved))
+    // FIXME deny paths that go up too much
     return {path: relative}
   }
 
@@ -79,7 +82,7 @@ class ModuleServer {
     ImportPattern.lastIndex = 0
     let m, result = "", pos = 0
     while (m = ImportPattern.exec(code)) {
-      let end = m.index + m[0].length, start = end - m[1].length, source = JSON.parse(m[1])
+      let end = m.index + m[0].length, start = end - m[1].length, source = (0, eval)(m[1])
       result += code.slice(pos, start)
       let {error, path} = this.resolveModule(pth.dirname(basePath), source)
       if (error) return {error}
@@ -97,8 +100,8 @@ const Braces = /\{[^}]*\}/.source
 const S = /(?:\s|\/\/.*|\/\*.*?\*\/)*/.source
 const Id = /[\w$]+/.source
 const ImportPattern = new RegExp(
-  `\\b(?:import${S}(?:${Id}${S},${S})?(?:(?:${Braces}|${Id}|\\*${S}as${S}${Id})${S}from${S})?|` +
-       `export${S}${Braces}${S}from${S})(${String})`,
+  `(?:\n|;|^)${S}(?:import${S}(?:${Id}${S},${S})?(?:(?:${Braces}|${Id}|\\*${S}as${S}${Id})${S}from${S})?|` +
+    `export${S}${Braces}${S}from${S})(${String})${S}(?=\n|;|$)`,
   "g")
 
 function dash(path) { return path.replace(/(^|\/)\.\.(?=$|\/)/g, "$1__") }
@@ -110,4 +113,10 @@ function packageFilter(pkg) {
   if (pkg.module) pkg.main = pkg.module
   else if (pkg.jnext) pkg.main = pkg.jsnext
   return pkg
+}
+
+function hash(str) {
+  let sum = crypto.createHash("sha1")
+  sum.update(str)
+  return sum.digest("hex")
 }
