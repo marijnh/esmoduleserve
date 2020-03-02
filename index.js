@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 const ModuleServer = require("./moduleserver")
 const path = require("path")
 
