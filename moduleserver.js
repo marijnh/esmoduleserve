@@ -103,7 +103,7 @@ const S = /(?:\s|\/\/.*|\/\*.*?\*\/)*/.source
 const Id = /[\w$]+/.source
 const ImportPattern = new RegExp(
   `(?:\n|;|^)${S}(?:import${S}(?:${Id}${S},${S})?(?:(?:${Braces}|${Id}|\\*${S}as${S}${Id})${S}from${S})?|` +
-    `export${S}${Braces}${S}from${S})(${String})${S}(?=\n|;|$)`,
+    `export${S}${Braces}${S}from${S})(${String})(?=${S}(?:\n|;|$))`,
   "g")
 
 function dash(path) { return path.replace(/(^|\/)\.\.(?=$|\/)/g, "$1__") }
