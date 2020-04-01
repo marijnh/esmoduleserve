@@ -67,13 +67,13 @@ class ModuleServer {
   // the module's file exists.
   resolveModule(basePath, path) {
     let resolved
-    try { resolved = resolve.sync(path, {basedir: basePath, packageFilter}) }
+    try { resolved = resolveMod(path, basePath) }
     catch(e) { return {error: e.toString()} }
 
     // Builtin modules resolve to strings like "fs". Try again with
     // slash which makes it possible to locally install an equivalent.
     if (resolved.indexOf("/") == -1) {
-      try { resolved = resolve.sync(path + "/", {basedir: basePath, packageFilter}) }
+      try { resolved = resolveMod(path + "/", basePath) }
       catch(e) { return {error: e.toString()} }
     }
 
@@ -115,6 +115,10 @@ function packageFilter(pkg) {
   if (pkg.module) pkg.main = pkg.module
   else if (pkg.jnext) pkg.main = pkg.jsnext
   return pkg
+}
+
+function resolveMod(path, base) {
+  return fs.realpathSync(resolve.sync(path, {basedir: base, packageFilter}))
 }
 
 function hash(str) {
