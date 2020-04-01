@@ -2,6 +2,7 @@ const pth = require("path"), fs = require("fs")
 const resolve = require("resolve")
 const {parse: parseURL} = require("url")
 const crypto = require("crypto")
+const acorn = require("acorn"), walk = require("acorn-walk")
 
 class Cached {
   constructor(content, headers) {
@@ -81,30 +82,26 @@ class ModuleServer {
   }
 
   resolveImports(basePath, code) {
-    ImportPattern.lastIndex = 0
-    let m, result = "", pos = 0
-    while (m = ImportPattern.exec(code)) {
-      let end = m.index + m[0].length, start = end - m[1].length, source = (0, eval)(m[1])
-      result += code.slice(pos, start)
-      let {error, path} = this.resolveModule(pth.dirname(basePath), source)
+    let patches = [], ast
+    try { ast = acorn.parse(code, {sourceType: "module"}) }
+    catch(error) { return {error: error.toString()} }
+    let patchSrc = (node) => {
+      if (!node.source) return
+      let orig = (0, eval)(code.slice(node.source.start, node.source.end))
+      let {error, path} = this.resolveModule(pth.dirname(basePath), orig)
       if (error) return {error}
-      result += JSON.stringify(dash(path))
-      pos = end
+      patches.push({from: node.source.start, to: node.source.end, text: JSON.stringify(dash(path))})
     }
-    result += code.slice(pos)
-    return {code: result}
+    walk.simple(ast, {
+      ExportNamedDeclaration: patchSrc,
+      ImportDeclaration: patchSrc
+    })
+    for (let patch of patches.sort((a, b) => b.from - a.from))
+      code = code.slice(0, patch.from) + patch.text + code.slice(patch.to)
+    return {code}
   }
 }
 module.exports = ModuleServer
-
-const String = /'(?:[^\\']|\\.)*'|"(?:[^\\"]|\\.)*"/.source
-const Braces = /\{[^}]*\}/.source
-const S = /(?:\s|\/\/.*|\/\*.*?\*\/)*/.source
-const Id = /[\w$]+/.source
-const ImportPattern = new RegExp(
-  `(?:\n|;|^)${S}(?:import${S}(?:${Id}${S},${S})?(?:(?:${Braces}|${Id}|\\*${S}as${S}${Id})${S}from${S})?|` +
-    `export${S}${Braces}${S}from${S})(${String})(?=${S}(?:\n|;|$))`,
-  "g")
 
 function dash(path) { return path.replace(/(^|\/)\.\.(?=$|\/)/g, "$1__") }
 function undash(path) { return path.replace(/(^|\/)__(?=$|\/)/g, "$1..") }

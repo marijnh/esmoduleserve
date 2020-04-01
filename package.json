@@ -21,6 +21,9 @@
   "license": "MIT",
   "dependencies": {
     "resolve": "^1.15.1",
-    "serve-static": "^1.14.1"
+    "serve-static": "^1.14.1",
+    "acorn": "^7.0.0",
+    "acorn-walk": "^7.1.0"
+
   }
 }
