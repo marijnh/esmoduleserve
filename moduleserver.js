@@ -5,9 +5,12 @@ const crypto = require("crypto")
 const acorn = require("acorn"), walk = require("acorn-walk")
 
 class Cached {
-  constructor(content, headers) {
+  constructor(content, mimetype) {
     this.content = content
-    this.headers = headers
+    this.headers = {
+      "content-type": mimetype + "; charset=utf-8",
+      "etag": '"' + hash(content) + '"'
+    }
   }
 }
 
@@ -46,12 +49,13 @@ class ModuleServer {
       let fullPath = unwin(pth.resolve(this.root, path)), code
       try { code = fs.readFileSync(fullPath, "utf8") }
       catch { send(404, "Not found"); return true }
-      let {code: resolvedCode, error} = this.resolveImports(fullPath, code)
-      if (error) { send(500, error); return true }
-      cached = this.cache[path] = new Cached(resolvedCode, {
-        "content-type": "application/javascript; charset=utf-8",
-        "etag": '"' + hash(resolvedCode) + '"'
-      })
+      if (/\.map$/.test(fullPath)) {
+        cached = this.cache[path] = new Cached(code, "application/json")
+      } else {
+        let {code: resolvedCode, error} = this.resolveImports(fullPath, code)
+        if (error) { send(500, error); return true }
+        cached = this.cache[path] = new Cached(resolvedCode, "application/javascript")
+      }
       // Drop cache entry when the file changes.
       let watching = fs.watch(fullPath, () => {
         watching.close()
