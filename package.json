@@ -1,6 +1,6 @@
 {
   "name": "esmoduleserve",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Serve ES modules over HTTP, rewriting imports",
   "main": "index.js",
   "bin": {
