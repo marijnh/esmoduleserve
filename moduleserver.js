@@ -87,7 +87,7 @@ class ModuleServer {
 
   resolveImports(basePath, code) {
     let patches = [], ast
-    try { ast = acorn.parse(code, {sourceType: "module"}) }
+    try { ast = acorn.parse(code, {sourceType: "module", ecmaVersion: "latest"}) }
     catch(error) { return {error: error.toString()} }
     let patchSrc = (node) => {
       if (!node.source) return
@@ -98,7 +98,14 @@ class ModuleServer {
     }
     walk.simple(ast, {
       ExportNamedDeclaration: patchSrc,
-      ImportDeclaration: patchSrc
+      ImportDeclaration: patchSrc,
+      ImportExpression: node => {
+        if (node.source.type == "Literal") {
+          let {error, path} = this.resolveModule(pth.dirname(basePath), node.source.value)
+          if (!error)
+            patches.push({from: node.source.start, to: node.source.end, text: JSON.stringify(dash(path))})
+        }
+      }
     })
     for (let patch of patches.sort((a, b) => b.from - a.from))
       code = code.slice(0, patch.from) + patch.text + code.slice(patch.to)
