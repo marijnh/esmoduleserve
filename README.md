@@ -52,7 +52,7 @@ The options recognized by the command-line server are:
 The `moduleserver.js` file exports this functionality as HTTP
 middleware. Usage looks something like:
 
-    const {ModuleServer} = require("esmoduleserver/moduleserver")
+    const {ModuleServer} = require("esmoduleserve/moduleserver")
     const moduleServer = new ModuleServer({root: "/some/path",
                                            maxDepth: 2,
                                            prefix: "_m"})
