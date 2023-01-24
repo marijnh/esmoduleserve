@@ -17,7 +17,7 @@
     "development",
     "dev server"
   ],
-  "author": "Marijn Haverbeke <marijnh@gmail.com>",
+  "author": "Marijn Haverbeke <marijn@haverbeke.berlin>",
   "license": "MIT",
   "dependencies": {
     "resolve": "^1.15.1",
