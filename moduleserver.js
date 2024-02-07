@@ -17,6 +17,7 @@ class Cached {
 class ModuleServer {
   constructor(options) {
     this.root = unwin(options.root)
+    this.self = findSelf(this.root)
     this.maxDepth = options.maxDepth == null ? 1 : options.maxDepth
     this.prefix = options.prefix || "_m"
     this.prefixTest = new RegExp(`^/${this.prefix}/(.*)`)
@@ -72,6 +73,10 @@ class ModuleServer {
   // the module's file exists.
   resolveModule(basePath, path) {
     let resolved
+    if (path == this.self) {
+      path = "."
+      basePath = this.root
+    }
     try { resolved = resolveMod(path, basePath) }
     catch(e) { return {error: e.toString()} }
 
@@ -139,4 +144,16 @@ function countParentRefs(path) {
   let re = /(^|\/)\.\.(?=\/|$)/g, count = 0
   while (re.exec(path)) count++
   return count
+}
+
+function findSelf(dir) {
+  for (;;) {
+    let pkg = pth.join(dir, "package.json"), json
+    try { json = JSON.parse(fs.readFileSync(pkg, "utf8")) }
+    catch {}
+    if (json) return json.name
+    let next = pth.dirname(dir)
+    if (next == dir) return null
+    dir = next
+  }
 }
