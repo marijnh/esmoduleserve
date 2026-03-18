@@ -1,3 +1,5 @@
+**This repository has moved to https://code.haverbeke.berlin/marijn/esmoduleserve**
+
 # esmoduleserve
 
 This is a shim HTTP server for directly running ES6 modules with
