@@ -90,7 +90,9 @@ class ModuleServer {
     let patches = [], ast
     try { ast = acorn.parse(code, {sourceType: "module", ecmaVersion: "latest"}) }
     catch(error) { return {error: error.toString()} }
+    let isModule = false
     let patchSrc = (node) => {
+      isModule = true
       if (!node.source) return
       let orig = (0, eval)(code.slice(node.source.start, node.source.end))
       let {error, path} = this.resolveModule(srcPath, orig)
@@ -98,9 +100,12 @@ class ModuleServer {
       patches.push({from: node.source.start, to: node.source.end, text: JSON.stringify(dash(path))})
     }
     walk.simple(ast, {
+      ExportAllDeclaration: () => isModule = true,
+      ExportDefaultDeclaration: () => isModule = true,
       ExportNamedDeclaration: patchSrc,
       ImportDeclaration: patchSrc,
       ImportExpression: node => {
+        isModule = true
         if (node.source.type == "Literal") {
           let {error, path} = this.resolveModule(srcPath, node.source.value)
           if (!error)
@@ -108,6 +113,20 @@ class ModuleServer {
         }
       }
     })
+    if (!isModule) {
+      patches.push({
+        from: ast.start,
+        to: ast.start,
+        text: 'const module = {exports: {}}const exports = module.exports'
+          + (code.charAt(ast.start) == ";" ? "" : ";")
+      })
+      patches.push({
+        from: ast.end,
+        to: ast.end,
+        text: (code.charAt(ast.end - 1) == ";" ? "" : ";")
+          + 'export default module.exports'
+      })
+    }
     for (let patch of patches.sort((a, b) => b.from - a.from))
       code = code.slice(0, patch.from) + patch.text + code.slice(patch.to)
     return {code}
